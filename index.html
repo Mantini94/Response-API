@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test AI Email API</title>
+
+  <style>
+    body {
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 40px;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+      font-size: 36px;
+    }
+
+    input,
+    textarea {
+      width: 650px;
+      background: #222;
+      color: white;
+      border: 1px solid #555;
+      padding: 14px;
+      margin-bottom: 15px;
+      font-size: 16px;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      height: 180px;
+      resize: vertical;
+    }
+
+    button {
+      background: #6c5ce7;
+      color: white;
+      border: none;
+      padding: 13px 22px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      margin-right: 10px;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .mode-buttons {
+      margin-top: 25px;
+      margin-bottom: 20px;
+    }
+
+    .mode-buttons button {
+      background: #333;
+    }
+
+    .mode-buttons button.active {
+      background: #00b894;
+    }
+
+    #result {
+      margin-top: 25px;
+      width: 800px;
+    }
+
+    .card {
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #aaa;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .value {
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .safe {
+      background: #003d2b;
+      color: #00ff99;
+    }
+
+    .care {
+      background: #3d2400;
+      color: #ffcc66;
+    }
+
+    .error {
+      color: #ff5f5f;
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      white-space: pre-wrap;
+    }
+
+    pre {
+      background: #1c1c1c;
+      color: #00ff99;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      width: 800px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Test AI Email API</h1>
+
+  <input
+    type="text"
+    id="subject"
+    placeholder="Temat maila"
+  />
+
+  <br>
+
+  <textarea
+    id="body"
+    placeholder="Treść wiadomości"
+  ></textarea>
+
+  <br>
+
+  <button onclick="sendRequest()">
+    Wyślij do API
+  </button>
+
+  <div class="mode-buttons">
+    <button id="userBtn" class="active" onclick="setMode('user')">
+      User mode
+    </button>
+
+    <button id="devBtn" onclick="setMode('dev')">
+      Dev mode
+    </button>
+  </div>
+
+  <div id="result">
+    Oczekiwanie na odpowiedź...
+  </div>
+
+  <script>
+    const API_URL = "https://n8n-mvj1.srv1505698.hstgr.cloud/webhook/analyze-email";
+
+    let currentMode = "user";
+    let lastData = null;
+
+    function setMode(mode) {
+      currentMode = mode;
+
+      document.getElementById("userBtn").classList.toggle("active", mode === "user");
+      document.getElementById("devBtn").classList.toggle("active", mode === "dev");
+
+      if (lastData) {
+        renderResult(lastData);
+      }
+    }
+
+    async function sendRequest() {
+      const resultDiv = document.getElementById("result");
+
+      resultDiv.innerHTML = "Wysyłanie...";
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            subject: document.getElementById("subject").value,
+            body: document.getElementById("body").value
+          })
+        });
+
+        const data = await response.json();
+
+        lastData = data;
+        renderResult(data);
+
+      } catch (error) {
+        resultDiv.innerHTML =
+          '<div class="error">Błąd połączenia:\\n\\n' + error.message + '</div>';
+      }
+    }
+
+    function renderResult(data) {
+      if (currentMode === "dev") {
+        renderDevMode(data);
+      } else {
+        renderUserMode(data);
+      }
+    }
+
+    function renderDevMode(data) {
+      document.getElementById("result").innerHTML =
+        "<pre>" + escapeHtml(JSON.stringify(data, null, 2)) + "</pre>";
+    }
+
+    function renderUserMode(data) {
+      const decisionClass = data.can_reply ? "safe" : "care";
+      const decisionText = data.can_reply
+        ? "Można odpowiedzieć automatycznie"
+        : "Wymaga ręcznej weryfikacji";
+
+      const confidence = typeof data.confidence === "number"
+        ? Math.round(data.confidence * 100) + "%"
+        : "brak danych";
+
+      const reply = data.reply
+        ? data.reply.replace(/\n/g, "<br>")
+        : "Brak wygenerowanej odpowiedzi.";
+
+      document.getElementById("result").innerHTML = `
+        <div class="card">
+          <h3>Kategoria</h3>
+          <div class="value">${escapeHtml(data.category || "brak")}</div>
+        </div>
+
+        <div class="card">
+          <h3>Decyzja</h3>
+          <div class="value">
+            <span class="badge ${decisionClass}">${decisionText}</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Pewność</h3>
+          <div class="value">${confidence}</div>
+        </div>
+
+        <div class="card">
+          <h3>Powód decyzji</h3>
+          <div class="value">${escapeHtml(data.reason || "brak")}</div>
+        </div>
+
+        <div class="card">
+          <h3>Proponowana odpowiedź</h3>
+          <div class="value">${reply}</div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+
+</body>
+</html>
