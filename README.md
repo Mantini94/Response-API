@@ -1,4 +1,19 @@
 ````md id="hzk8hm"
+
+## Architecture
+
+```text
+Frontend UI (HTML/CSS/JS)
+        ↓
+Webhook API (n8n)
+        ↓
+OpenAI Processing
+        ↓
+JSON Parsing
+        ↓
+Dynamic Result Rendering
+```
+
 # AI Email Classification API
 
 AI-powered email analysis system with frontend UI, automatic classification, risk assessment and response generation.
