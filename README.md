@@ -2,7 +2,7 @@
 
 ## Architecture
 
-```text
+
 Frontend UI (HTML/CSS/JS)
         ↓
 Webhook API (n8n)
@@ -12,7 +12,7 @@ OpenAI Processing
 JSON Parsing
         ↓
 Dynamic Result Rendering
-```
+
 
 # AI Email Classification API
 
